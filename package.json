@@ -1,0 +1,16 @@
+{
+  "name": "flower-market",
+  "version": "0.0.0",
+  "description": "game for breeding and selling flowers",
+  "scripts": {
+    "start": "node server.js 1637"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dtudury/flower-market.git"
+  },
+  "devDependencies": {
+    "express": "^4.17.1",
+    "standard": "^16.0.3"
+  }
+}
