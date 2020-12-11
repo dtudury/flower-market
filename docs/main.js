@@ -1,5 +1,11 @@
 /* eslint-env browser */
-import { render, h } from './horseless.0.5.1.min.esm.js'
+import { render, h, proxy, watchFunction } from './horseless.0.5.1.min.esm.js'
+const model = window.model = proxy({
+  turns: 1.7,
+  scale: 0.2,
+  stepsPerTurn: 3,
+  symmetry: 0
+})
 
 const init = canvas => {
   if (!canvas) return
@@ -69,8 +75,8 @@ const init = canvas => {
   return draw
 
   function draw (r, scale) {
+    if (r === true) return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.uniform2f(rLocation, Math.cos(r) * scale, Math.sin(r) * scale)
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
 
@@ -99,28 +105,67 @@ const init = canvas => {
   }
 }
 requestAnimationFrame(() => {
-  const stamp = document.querySelector('canvas')
-  const redraw = init(stamp)
-  function redrawAll () {
-    for (let i = 0; i <= 8; ++i) {
-      const base = 10 / (i + 10)
-      const scale = Math.pow(base, 2)
-      const r = 12 * i / base / (72 * 4) * 2 * Math.PI
-      for (let angle = 0; angle < 3; angle++) {
-        redraw(angle / 3 * 2 * Math.PI + r, scale)
-        redraw(angle / 3 * 2 * Math.PI - r, scale)
+  watchFunction(() => {
+    const stamp = document.querySelector('canvas')
+    const redraw = init(stamp)
+    const turns = model.turns
+    const steps = Math.pow(Math.E, model.stepsPerTurn) * turns
+    const scaleBase = model.scale
+    const symmetry = model.symmetry
+    function redrawAll () {
+      redraw(true)
+      for (let i = 0; i <= steps; ++i) {
+      // const base = 0.5 + Math.cos(Math.PI * i / steps) * 0.5
+        const scale = Math.pow(scaleBase, i / steps)
+        const r = turns * i / steps * 2 * Math.PI
+        if (symmetry) {
+          for (let angle = 0; angle < symmetry; angle++) {
+            redraw(angle / symmetry * 2 * Math.PI + r, scale)
+            redraw(angle / symmetry * 2 * Math.PI - r, scale)
+          }
+        } else {
+          redraw(r, scale)
+        }
       }
     }
-  }
-  requestAnimationFrame(redrawAll)
+    requestAnimationFrame(redrawAll)
+  })
 })
 
+const onTurnsInput = el => e => {
+  model.turns = +el.value
+}
+const onScaleInput = el => e => {
+  model.scale = +el.value
+}
+const onSymmetryInput = el => e => {
+  model.symmetry = +el.value
+}
+const onStepsInput = el => e => {
+  model.stepsPerTurn = +el.value
+}
+
 render(document.body, h`
-  <canvas height="512px" width="512px" style="background: OliveDrab;"/>
+  <canvas height="512px" width="512px" style="background: SkyBlue;"/>
   <div>
     <label>
-      <input type="range" oninput=${oninput} min="0" max="1023" value="512" step="1">
-      Leafiness
+      <input type="range" oninput=${onTurnsInput} min="0" max="5" value="${() => model.turns}" step="0.01">
+      Turns: ${() => model.turns}
+    </label>
+    <br>
+    <label>
+      <input type="range" oninput=${onScaleInput} min="0.1" max="1.1" value="${() => model.scale}" step="0.001">
+      Final Scale: ${() => model.scale}
+    </label>
+    <br>
+    <label>
+      <input type="range" oninput=${onSymmetryInput} min="0" max="5" value="${() => model.symmetry}" step="1">
+      Symmetry: ${() => model.symmetry}
+    </label>
+    <br>
+    <label>
+      <input type="range" oninput=${onStepsInput} min="0" max="5" value="${() => model.stepsPerTurn}" step="0.1">
+      Steps per Turn: e^${() => model.stepsPerTurn}
     </label>
   </div>
 `)
