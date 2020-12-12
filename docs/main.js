@@ -1,10 +1,11 @@
 /* eslint-env browser */
 import { render, h, proxy, watchFunction } from './horseless.0.5.1.min.esm.js'
 const model = window.model = proxy({
-  turns: 1.7,
-  scale: 0.2,
-  stepsPerTurn: 3,
-  symmetry: 0
+  turns: 0,
+  scale: 0,
+  generators: 1,
+  symmetry: false,
+  stepsPerTurn: 0
 })
 
 const init = canvas => {
@@ -20,17 +21,19 @@ const init = canvas => {
       varying vec4 color;
       uniform vec2 r;
       void main() {
-        vec2 a = vec2(0.0, 0.0);
-        vec2 b = vec2(1.0 * (point.x - 0.5), 0.0);
+        float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
+        float vx = 0.5 - abs(point.x - 0.5) * 1.0;
+        float dy = abs(mod(5.0 * point.y, 1.0) - 0.5) * 2.0;
+        vec2 a = vec2(0.0, vx);
+        vec2 b = vec2(1.0 * (point.x - 0.5), vx);
         vec2 c = vec2(1.0 * (point.x - 0.5), 1.0);
         vec2 d = vec2(0.0, 1.0);
         float y = point.y;
         float iy = 1.0 - y;
         vec2 mapped = iy * iy * iy * a + 3.0 * iy * iy * y * b + 3.0 * iy * y * y * c + y * y * y * d;
-        float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
-        color = vec4(point.x, point.y, dx, 1.0 - dx / 2.0);
-        mapped = vec2(mapped.x * r.x - mapped.y * r.y, mapped.x * r.y + mapped.y * r.x);
-        gl_Position = vec4(mapped, 0.0, 1.0);
+        color = vec4(point.x, dy, dx, 1.0 - dx / 2.0);
+        vec2 rotated = vec2(mapped.x * r.x - mapped.y * r.y, mapped.x * r.y + mapped.y * r.x);
+        gl_Position = vec4(rotated, 0.0, 1.0);
       }
     `),
     createShader(gl.FRAGMENT_SHADER, `
@@ -112,19 +115,17 @@ requestAnimationFrame(() => {
     const steps = Math.pow(Math.E, model.stepsPerTurn) * turns
     const scaleBase = model.scale
     const symmetry = model.symmetry
+    const generators = model.generators
     function redrawAll () {
       redraw(true)
       for (let i = 0; i <= steps; ++i) {
-      // const base = 0.5 + Math.cos(Math.PI * i / steps) * 0.5
-        const scale = Math.pow(scaleBase, i / steps)
-        const r = turns * i / steps * 2 * Math.PI
-        if (symmetry) {
-          for (let angle = 0; angle < symmetry; angle++) {
-            redraw(angle / symmetry * 2 * Math.PI + r, scale)
-            redraw(angle / symmetry * 2 * Math.PI - r, scale)
+        const scale = steps ? (Math.pow(scaleBase, i / steps)) : 1
+        const r = steps ? (turns * i / steps * 2 * Math.PI) : 0
+        for (let angle = 0; angle < generators; angle++) {
+          redraw(angle / generators * 2 * Math.PI + r, scale)
+          if (symmetry) {
+            redraw(angle / generators * 2 * Math.PI - r, scale)
           }
-        } else {
-          redraw(r, scale)
         }
       }
     }
@@ -138,8 +139,11 @@ const onTurnsInput = el => e => {
 const onScaleInput = el => e => {
   model.scale = +el.value
 }
+const onGeneratorsInput = el => e => {
+  model.generators = +el.value
+}
 const onSymmetryInput = el => e => {
-  model.symmetry = +el.value
+  model.symmetry = !!+el.value
 }
 const onStepsInput = el => e => {
   model.stepsPerTurn = +el.value
@@ -154,17 +158,22 @@ render(document.body, h`
     </label>
     <br>
     <label>
-      <input type="range" oninput=${onScaleInput} min="0.1" max="1.1" value="${() => model.scale}" step="0.001">
+      <input type="range" oninput=${onScaleInput} min="0.0" max="1.0" value="${() => model.scale}" step="0.001">
       Final Scale: ${() => model.scale}
     </label>
     <br>
     <label>
-      <input type="range" oninput=${onSymmetryInput} min="0" max="5" value="${() => model.symmetry}" step="1">
+      <input type="range" oninput=${onGeneratorsInput} min="1" max="7" value="${() => model.generators}" step="1">
+      Generators: ${() => model.generators}
+    </label>
+    <br>
+    <label>
+      <input type="range" oninput=${onSymmetryInput} min="0" max="1" value="${() => model.symmetry ? 1 : 0}" step="1">
       Symmetry: ${() => model.symmetry}
     </label>
     <br>
     <label>
-      <input type="range" oninput=${onStepsInput} min="0" max="5" value="${() => model.stepsPerTurn}" step="0.1">
+      <input type="range" oninput=${onStepsInput} min="0" max="5" value="${() => model.stepsPerTurn}" step="0.01">
       Steps per Turn: e^${() => model.stepsPerTurn}
     </label>
   </div>
