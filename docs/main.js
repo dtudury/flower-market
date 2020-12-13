@@ -2,7 +2,7 @@
 import { render, h, proxy, watchFunction } from './horseless.0.5.1.min.esm.js'
 const model = window.model = proxy({
   turns: 0,
-  scale: 0,
+  smallScale: 0,
   generators: 1,
   symmetry: false,
   stepsPerTurn: 0
@@ -20,18 +20,32 @@ const init = canvas => {
       attribute vec2 point;
       varying vec4 color;
       uniform vec2 r;
+      uniform vec2 shape[16];
       void main() {
+        float xMiddleness = 1.0 - abs(point.x - 0.5) * 2.0;
+        float yMiddleness = 1.0 - abs(point.y - 0.5) * 2.0;
         float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
-        float vx = 0.5 - abs(point.x - 0.5) * 1.0;
-        float dy = abs(mod(5.0 * point.y, 1.0) - 0.5) * 2.0;
-        vec2 a = vec2(0.0, vx);
-        vec2 b = vec2(1.0 * (point.x - 0.5), vx);
-        vec2 c = vec2(1.0 * (point.x - 0.5), 1.0);
-        vec2 d = vec2(0.0, 1.0);
+        float dy = abs(mod(20.0 * point.y, 1.0) - 0.5) * 2.0;
+
         float y = point.y;
         float iy = 1.0 - y;
-        vec2 mapped = iy * iy * iy * a + 3.0 * iy * iy * y * b + 3.0 * iy * y * y * c + y * y * y * d;
-        color = vec4(point.x, dy, dx, 1.0 - dx / 2.0);
+        float x = point.x;
+        float ix = 1.0 - x;
+
+        vec2 curve[4];
+        for (int i = 0; i < 16; i += 4) {
+          curve[i / 4] = iy * iy * iy * shape[i] + 3.0 * iy * iy * y * shape[i + 1] + 3.0 * iy * y * y * shape[i + 2] + y * y * y * shape[i + 3];
+        }
+        vec2 mapped = ix * ix * ix * curve[0] + 3.0 * ix * ix * x * curve[1] + 3.0 * ix * x * x * curve[2] + x * x * x * curve[3];
+
+        float outline = max(1.0 - yMiddleness, 1.0 - xMiddleness);
+        outline *= outline;
+        color = vec4(
+          outline * 0.8,
+          0.7 * dx * (1.0 - outline), 
+          dy * (1.0 - outline),
+          max(1.0 - 0.1 * yMiddleness, outline)
+        );
         vec2 rotated = vec2(mapped.x * r.x - mapped.y * r.y, mapped.x * r.y + mapped.y * r.x);
         gl_Position = vec4(rotated, 0.0, 1.0);
       }
@@ -47,6 +61,7 @@ const init = canvas => {
   gl.useProgram(program)
   const vertexPositionAttribute = gl.getAttribLocation(program, 'point')
   const rLocation = gl.getUniformLocation(program, 'r')
+  const shapeLocation = gl.getUniformLocation(program, 'shape')
   const buffer = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
   const DIMENSTIONS = 2
@@ -80,6 +95,12 @@ const init = canvas => {
   function draw (r, scale) {
     if (r === true) return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.uniform2f(rLocation, Math.cos(r) * scale, Math.sin(r) * scale)
+    gl.uniform2fv(shapeLocation, [
+      [0, 0], [1 / 3, -1 / 3], [1, 0], [1, 0],
+      [-1 / 3, 1 / 3], [0 / 3, 0 / 3], [1, 0], [1, 0],
+      [-1 / 3, 2 / 3], [0, 1], [1, 1], [1, 1],
+      [0, 1], [1 / 3, 4 / 3], [1, 1], [1, 1]
+    ].flat())
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
 
@@ -113,13 +134,17 @@ requestAnimationFrame(() => {
     const redraw = init(stamp)
     const turns = model.turns
     const steps = Math.pow(Math.E, model.stepsPerTurn) * turns
-    const scaleBase = model.scale
+    const smallScale = model.smallScale
     const symmetry = model.symmetry
     const generators = model.generators
     function redrawAll () {
       redraw(true)
       for (let i = 0; i <= steps; ++i) {
-        const scale = steps ? (Math.pow(scaleBase, i / steps)) : 1
+        const fraction = steps ? i / steps : 1
+        const curvyFraction = Math.cos((1 - fraction) * Math.PI) * 0.5 + 0.5
+        const scale = steps ? 1 - curvyFraction + curvyFraction * smallScale : 1
+        // const scale = steps ? (Math.pow(smallScale, i / steps)) : 1
+        // const scale = steps ? 1 - fraction + fraction * smallScale : 1
         const r = steps ? (turns * i / steps * 2 * Math.PI) : 0
         for (let angle = 0; angle < generators; angle++) {
           redraw(angle / generators * 2 * Math.PI + r, scale)
@@ -137,7 +162,7 @@ const onTurnsInput = el => e => {
   model.turns = +el.value
 }
 const onScaleInput = el => e => {
-  model.scale = +el.value
+  model.smallScale = +el.value
 }
 const onGeneratorsInput = el => e => {
   model.generators = +el.value
@@ -158,8 +183,8 @@ render(document.body, h`
     </label>
     <br>
     <label>
-      <input type="range" oninput=${onScaleInput} min="0.0" max="1.0" value="${() => model.scale}" step="0.001">
-      Final Scale: ${() => model.scale}
+      <input type="range" oninput=${onScaleInput} min="0.0" max="1.0" value="${() => model.smallScale}" step="0.001">
+      Final Scale: ${() => model.smallScale}
     </label>
     <br>
     <label>
@@ -174,7 +199,7 @@ render(document.body, h`
     <br>
     <label>
       <input type="range" oninput=${onStepsInput} min="0" max="5" value="${() => model.stepsPerTurn}" step="0.01">
-      Steps per Turn: e^${() => model.stepsPerTurn}
+      Steps per Turn: ${() => Math.pow(Math.E, model.stepsPerTurn)}
     </label>
   </div>
 `)
