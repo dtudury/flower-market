@@ -24,6 +24,7 @@ const init = canvas => {
       void main() {
         float xMiddleness = 1.0 - abs(point.x - 0.5) * 2.0;
         float yMiddleness = 1.0 - abs(point.y - 0.5) * 2.0;
+        float middleness = sqrt(pow(point.x - 0.5, 2.0) + pow(point.y = 0.5, 2.0));
         float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
         float dy = abs(mod(20.0 * point.y, 1.0) - 0.5) * 2.0;
 
@@ -96,10 +97,10 @@ const init = canvas => {
     if (r === true) return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.uniform2f(rLocation, Math.cos(r) * scale, Math.sin(r) * scale)
     gl.uniform2fv(shapeLocation, [
-      [0, 0], [1 / 3, -1 / 3], [1, 0], [1, 0],
-      [-1 / 3, 1 / 3], [0 / 3, 0 / 3], [1, 0], [1, 0],
-      [-1 / 3, 2 / 3], [0, 1], [1, 1], [1, 1],
-      [0, 1], [1 / 3, 4 / 3], [1, 1], [1, 1]
+      [-3 / 6, +0 / 6], [-1 / 6, -2 / 6], [+1 / 6, -2 / 6], [+3 / 6, +0 / 6],
+      [-5 / 6, +2 / 6], [-3 / 6, +0 / 6], [+3 / 6, +0 / 6], [+5 / 6, +2 / 6],
+      [-5 / 6, +4 / 6], [-3 / 6, +6 / 6], [+3 / 6, +6 / 6], [+5 / 6, +4 / 6],
+      [-3 / 6, +6 / 6], [-1 / 6, +8 / 6], [+1 / 6, +8 / 6], [+3 / 6, +6 / 6]
     ].flat())
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
