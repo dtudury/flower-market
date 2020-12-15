@@ -96,9 +96,25 @@ const init = canvas => {
   function draw (r, scale) {
     if (r === true) return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.uniform2f(rLocation, Math.cos(r) * scale, Math.sin(r) * scale)
-    const topWidth = 0.5
-    const bottomWidth = 0.1
-    const height = 0.9
+    const control = (x, y, angle, spread) => ({
+      middle: [x, y],
+      right: [x + Math.cos(angle) * spread, y + Math.sin(angle) * spread],
+      left: [x - Math.cos(angle) * spread, y - Math.sin(angle) * spread]
+    })
+    const tl = control(-0.5, 1, Math.PI / 4, 0.3)
+    const tm = control(0, 1, 0, 0.3)
+    const tr = control(0.5, 1, -Math.PI / 4, 0.3)
+    const bl = control(-0.5, 0, -Math.PI / 4, 0.3)
+    const bm = control(0, 0, 0, 0.3)
+    const br = control(0.5, 0, Math.PI / 4, 0.3)
+    const a = [tl.middle, tl.right, tr.left, tr.middle]
+    const b = [tl.left, tl.middle, tr.middle, tr.right]
+    const c = [bl.left, bl.middle, br.middle, br.right]
+    const d = [bl.middle, bl.right, br.left, br.middle]
+    console.log([a, b, c, d].flat(2))
+
+    gl.uniform2fv(shapeLocation, [a, b, c, d].flat(2))
+    /*
     gl.uniform2fv(shapeLocation, [
       [-topWidth, height], [-topWidth / 3, height], [topWidth / 3, height], [topWidth, height],
       [-7 * topWidth / 3, height], [-topWidth, height], [topWidth, height], [7 * topWidth / 3, height],
@@ -106,6 +122,7 @@ const init = canvas => {
       [-bottomWidth, 0], [-bottomWidth, -height / 6], [bottomWidth, -height / 6], [bottomWidth, 0]
 
     ].flat())
+    */
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
 
