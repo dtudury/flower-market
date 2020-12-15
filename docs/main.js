@@ -24,9 +24,9 @@ const init = canvas => {
       void main() {
         float xMiddleness = 1.0 - abs(point.x - 0.5) * 2.0;
         float yMiddleness = 1.0 - abs(point.y - 0.5) * 2.0;
-        float middleness = sqrt(pow(point.x - 0.5, 2.0) + pow(point.y = 0.5, 2.0));
+        float middleness = sqrt(pow(2.0 * point.x - 1.0, 2.0) + pow(2.0 * point.y - 1.0, 2.0));
         float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
-        float dy = abs(mod(20.0 * point.y, 1.0) - 0.5) * 2.0;
+        float dy = abs(mod(10.0 * point.y, 1.0) - 0.5) * 2.0;
 
         float y = point.y;
         float iy = 1.0 - y;
@@ -39,12 +39,12 @@ const init = canvas => {
         }
         vec2 mapped = ix * ix * ix * curve[0] + 3.0 * ix * ix * x * curve[1] + 3.0 * ix * x * x * curve[2] + x * x * x * curve[3];
 
-        float outline = max(1.0 - yMiddleness, 1.0 - xMiddleness);
+        float outline = 0.0;//max(1.0 - yMiddleness, 1.0 - xMiddleness);
         outline *= outline;
         color = vec4(
-          outline * 0.8,
-          0.7 * dx * (1.0 - outline), 
           dy * (1.0 - outline),
+          0.7 * dx * (1.0 - outline), 
+          outline * 0.8,
           max(1.0 - 0.1 * yMiddleness, outline)
         );
         vec2 rotated = vec2(mapped.x * r.x - mapped.y * r.y, mapped.x * r.y + mapped.y * r.x);
@@ -96,11 +96,15 @@ const init = canvas => {
   function draw (r, scale) {
     if (r === true) return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.uniform2f(rLocation, Math.cos(r) * scale, Math.sin(r) * scale)
+    const topWidth = 0.5
+    const bottomWidth = 0.1
+    const height = 0.9
     gl.uniform2fv(shapeLocation, [
-      [-3 / 6, +0 / 6], [-1 / 6, -2 / 6], [+1 / 6, -2 / 6], [+3 / 6, +0 / 6],
-      [-5 / 6, +2 / 6], [-3 / 6, +0 / 6], [+3 / 6, +0 / 6], [+5 / 6, +2 / 6],
-      [-5 / 6, +4 / 6], [-3 / 6, +6 / 6], [+3 / 6, +6 / 6], [+5 / 6, +4 / 6],
-      [-3 / 6, +6 / 6], [-1 / 6, +8 / 6], [+1 / 6, +8 / 6], [+3 / 6, +6 / 6]
+      [-topWidth, height], [-topWidth / 3, height], [topWidth / 3, height], [topWidth, height],
+      [-7 * topWidth / 3, height], [-topWidth, height], [topWidth, height], [7 * topWidth / 3, height],
+      [-bottomWidth, height / 6], [-bottomWidth, 0], [bottomWidth, 0], [bottomWidth, height / 6],
+      [-bottomWidth, 0], [-bottomWidth, -height / 6], [bottomWidth, -height / 6], [bottomWidth, 0]
+
     ].flat())
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
