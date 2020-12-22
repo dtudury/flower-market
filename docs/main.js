@@ -20,7 +20,7 @@ const init = canvas => {
       attribute vec2 point;
       varying vec4 color;
       uniform vec2 r;
-      uniform vec2 shape[16];
+      uniform vec2 shape[28];
       void main() {
         float xMiddleness = 1.0 - abs(point.x - 0.5) * 2.0;
         float yMiddleness = 1.0 - abs(point.y - 0.5) * 2.0;
@@ -28,14 +28,20 @@ const init = canvas => {
         float dx = abs(mod(10.0 * point.x, 1.0) - 0.5) * 2.0;
         float dy = abs(mod(10.0 * point.y, 1.0) - 0.5) * 2.0;
 
-        float y = point.y;
+        float y = point.y * 2.0;
+        int offset = 0;
+        if (y > 1.0) {
+          y -= 1.0;
+          offset = 3;
+        }
         float iy = 1.0 - y;
-        float x = point.x;
+        float x = point.x * 1.0;
         float ix = 1.0 - x;
 
         vec2 curve[4];
-        for (int i = 0; i < 16; i += 4) {
-          curve[i / 4] = iy * iy * iy * shape[i] + 3.0 * iy * iy * y * shape[i + 1] + 3.0 * iy * y * y * shape[i + 2] + y * y * y * shape[i + 3];
+        for (int i = 0; i < 28; i += 7) {
+          int index = i + offset;
+          curve[i / 7] = iy * iy * iy * shape[index] + 3.0 * iy * iy * y * shape[index + 1] + 3.0 * iy * y * y * shape[index + 2] + y * y * y * shape[index + 3];
         }
         vec2 mapped = ix * ix * ix * curve[0] + 3.0 * ix * ix * x * curve[1] + 3.0 * ix * x * x * curve[2] + x * x * x * curve[3];
 
@@ -67,7 +73,7 @@ const init = canvas => {
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
   const DIMENSTIONS = 2
   const vertices = []
-  const xStep = 1 / 1000
+  const xStep = 1 / 100
   const yStep = 1 / 100
   for (let x = 0; x < 1; x += xStep) {
     for (let y = 0; y < 1; y += yStep) {
@@ -99,30 +105,37 @@ const init = canvas => {
     const control = (x, y, angle, spread) => ({
       middle: [x, y],
       right: [x + Math.cos(angle) * spread, y + Math.sin(angle) * spread],
-      left: [x - Math.cos(angle) * spread, y - Math.sin(angle) * spread]
+      left: [x - Math.cos(angle) * spread, y - Math.sin(angle) * spread],
+      angle,
+      spread
     })
-    const tl = control(-0.5, 1, Math.PI / 4, 0.3)
-    const tm = control(0, 1, 0, 0.3)
-    const tr = control(0.5, 1, -Math.PI / 4, 0.3)
-    const bl = control(-0.5, 0, -Math.PI / 4, 0.3)
+    const mix = (a, b, fraction) => {
+      if (typeof a === 'number') {
+        return a * (1 - fraction) + b * fraction
+      } else if (typeof a === 'object') {
+        const clone = Array.isArray(a) ? [] : {}
+        Object.keys(a).forEach(field => {
+          clone[field] = mix(a[field], b[field], fraction)
+        })
+        return clone
+      }
+      throw new Error('bad thing')
+    }
+    const tl = control(-0.5, 0.8, Math.PI / 4, 0.3)
+    const tm = control(0, 1.0, 0, 0.3)
+    const tr = control(0.5, 0.8, -Math.PI / 4, 0.3)
+    const bl = control(-0.5, 1 / 3, -Math.PI * 1 / 4, 0.3)
     const bm = control(0, 0, 0, 0.3)
-    const br = control(0.5, 0, Math.PI / 4, 0.3)
-    const a = [tl.middle, tl.right, tr.left, tr.middle]
-    const b = [tl.left, tl.middle, tr.middle, tr.right]
-    const c = [bl.left, bl.middle, br.middle, br.right]
-    const d = [bl.middle, bl.right, br.left, br.middle]
-    console.log([a, b, c, d].flat(2))
+    const br = control(0.5, 1 / 3, Math.PI * 1 / 4, 0.3)
+    const ttbm = mix(tm, bm, 1 / 3)
+    const tbbm = mix(tm, bm, 2 / 3)
+    console.log(ttbm)
+    const a = [tl.middle, tl.right, tm.left, tm.middle, tm.right, tr.left, tr.middle]
+    const b = [tl.left, tl.left, ttbm.left, ttbm.middle, ttbm.right, tr.middle, tr.right]
+    const c = [bl.left, bl.left, tbbm.left, tbbm.middle, tbbm.right, br.middle, br.right]
+    const d = [bl.middle, bl.right, bm.left, bm.middle, bm.right, br.left, br.middle]
 
     gl.uniform2fv(shapeLocation, [a, b, c, d].flat(2))
-    /*
-    gl.uniform2fv(shapeLocation, [
-      [-topWidth, height], [-topWidth / 3, height], [topWidth / 3, height], [topWidth, height],
-      [-7 * topWidth / 3, height], [-topWidth, height], [topWidth, height], [7 * topWidth / 3, height],
-      [-bottomWidth, height / 6], [-bottomWidth, 0], [bottomWidth, 0], [bottomWidth, height / 6],
-      [-bottomWidth, 0], [-bottomWidth, -height / 6], [bottomWidth, -height / 6], [bottomWidth, 0]
-
-    ].flat())
-    */
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / DIMENSTIONS)
   }
 
